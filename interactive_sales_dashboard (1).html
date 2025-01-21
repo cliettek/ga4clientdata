@@ -1,0 +1,73 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Sales Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.24.2.min.js"></script>
+</head>
+<body>
+    <h1>Interactive Sales Performance Dashboard</h1>
+    <input type="file" id="fileInput" />
+    <div id="dashboard">
+        <div id="chart1" style="width: 100%; height: 500px;"></div>
+        <div id="chart2" style="width: 100%; height: 500px;"></div>
+        <div id="chart3" style="width: 100%; height: 500px;"></div>
+    </div>
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = JSON.parse(e.target.result);
+
+                    // Extract data
+                    const sources = [...new Set(data.map(item => item.Source))];
+                    const keyEvents = sources.map(source => 
+                        data.filter(item => item.Source === source)
+                            .reduce((sum, curr) => sum + (curr["Key events"] || 0), 0)
+                    );
+                    const cities = [...new Set(data.map(item => item.City))];
+                    const eventsByCity = cities.map(city =>
+                        data.filter(item => item.City === city)
+                            .reduce((sum, curr) => sum + (curr["Key events"] || 0), 0)
+                    );
+
+                    // Chart 1: Total Key Events by Source
+                    Plotly.newPlot('chart1', [{
+                        x: sources,
+                        y: keyEvents,
+                        type: 'bar',
+                        name: 'Key Events',
+                        marker: { color: 'blue' }
+                    }], { title: 'Total Key Events by Source' });
+
+                    // Chart 2: Top 10 Cities with Most Key Events
+                    const sortedCities = cities
+                        .map((city, i) => ({ city, events: eventsByCity[i] }))
+                        .sort((a, b) => b.events - a.events)
+                        .slice(0, 10);
+                    Plotly.newPlot('chart2', [{
+                        x: sortedCities.map(item => item.city),
+                        y: sortedCities.map(item => item.events),
+                        type: 'bar',
+                        name: 'Key Events',
+                        marker: { color: 'green' }
+                    }], { title: 'Top 10 Cities with Most Key Events' });
+
+                    // Chart 3: Event Distribution as Pie Chart
+                    Plotly.newPlot('chart3', [{
+                        labels: sources,
+                        values: keyEvents,
+                        type: 'pie',
+                        name: 'Event Distribution'
+                    }], { title: 'Event Distribution by Source' });
+                };
+                reader.readAsText(file);
+            }
+        });
+    </script>
+</body>
+</html>
